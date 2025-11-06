@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Realtor Chatbot</title>
+    <style>
+        /* Chatbot Styles */
+        #chatbot-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 350px;
+            height: 500px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            display: none;
+            flex-direction: column;
+            z-index: 1000;
+        }
+        
+        #chatbot-header {
+            background: #4f46e5;
+            color: white;
+            padding: 15px;
+            border-radius: 10px 10px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        #chatbot-messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            max-height: 350px;
+        }
+        
+        .message {
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 18px;
+            max-width: 80%;
+        }
+        
+        .message.user {
+            background: #4f46e5;
+            color: white;
+            margin-left: auto;
+        }
+        
+        .message.assistant {
+            background: #f3f4f6;
+            color: #374151;
+        }
+        
+        #chatbot-input {
+            padding: 15px;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        #chatbot-input input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 20px;
+            outline: none;
+        }
+        
+        #chatbot-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background: #4f46e5;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 24px;
+            z-index: 1001;
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <!-- Chatbot Toggle Button -->
+    <button id="chatbot-toggle">💬</button>
+    
+    <!-- Chatbot Container -->
+    <div id="chatbot-container">
+        <div id="chatbot-header">
+            <span>Realtor Assistant</span>
+            <div>
+                <button onclick="clearChat()" style="background: none; border: none; color: white; font-size: 14px; cursor: pointer; margin-right: 10px;">🔄</button>
+                <button class="close-btn" onclick="toggleChatbot()">×</button>
+            </div>
+        </div>
+        <div id="chatbot-messages"></div>
+        <div id="chatbot-input">
+            <input type="text" id="message-input" placeholder="Ask about properties..." onkeypress="handleKeyPress(event)">
+        </div>
+    </div>
+
+    <script>
+        // Configuration - Replace with your realtor's API key
+        const REALTOR_API_KEY = 'YOUR_REALTOR_API_KEY_HERE';
+        const CHATBOT_BASE_URL = 'https://yourplatform.com/api/chatbot';
+        
+        let sessionId = null;
+        let isOpen = false;
+        
+        // Initialize chatbot
+        async function initChatbot() {
+            try {
+                const response = await fetch(`${CHATBOT_BASE_URL}/session`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${REALTOR_API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({})
+                });
+                
+                const data = await response.json();
+                sessionId = data.sessionId;
+                
+                // Load existing messages
+                if (data.messages && data.messages.length > 0) {
+                    data.messages.forEach(msg => {
+                        addMessage(msg.role, msg.content);
+                    });
+                } else {
+                    addMessage('assistant', 'Hi! I\'m here to help you find your perfect property. What are you looking for?');
+                }
+            } catch (error) {
+                console.error('Failed to initialize chatbot:', error);
+                addMessage('assistant', 'Sorry, I\'m having trouble connecting. Please try again later.');
+            }
+        }
+        
+        // Toggle chatbot visibility
+        function toggleChatbot() {
+            const container = document.getElementById('chatbot-container');
+            const toggle = document.getElementById('chatbot-toggle');
+            
+            isOpen = !isOpen;
+            container.style.display = isOpen ? 'flex' : 'none';
+            toggle.style.display = isOpen ? 'none' : 'block';
+        }
+        
+        // Add message to chat
+        function addMessage(role, content) {
+            const messagesContainer = document.getElementById('chatbot-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+            messageDiv.textContent = content;
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+        
+        // Send message
+        async function sendMessage() {
+            const input = document.getElementById('message-input');
+            const message = input.value.trim();
+            
+            if (!message || !sessionId) return;
+            
+            // Add user message
+            addMessage('user', message);
+            input.value = '';
+            
+            // Show loading
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'message assistant';
+            loadingDiv.textContent = 'Thinking...';
+            document.getElementById('chatbot-messages').appendChild(loadingDiv);
+            
+            try {
+                const response = await fetch(`${CHATBOT_BASE_URL}/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${REALTOR_API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        sessionId: sessionId
+                    })
+                });
+                
+                const data = await response.json();
+                
+                // Remove loading message
+                document.getElementById('chatbot-messages').removeChild(loadingDiv);
+                
+                // Add assistant response
+                addMessage('assistant', data.message);
+                
+                // Extract profile after each message
+                setTimeout(() => {
+                    extractProfile();
+                }, 1000);
+                
+            } catch (error) {
+                console.error('Failed to send message:', error);
+                document.getElementById('chatbot-messages').removeChild(loadingDiv);
+                addMessage('assistant', 'Sorry, I encountered an error. Please try again.');
+            }
+        }
+        
+        // Extract customer profile
+        async function extractProfile() {
+            try {
+                await fetch(`${CHATBOT_BASE_URL}/profile`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${REALTOR_API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        sessionId: sessionId
+                    })
+                });
+            } catch (error) {
+                console.error('Profile extraction failed:', error);
+            }
+        }
+        
+        // Clear chat function
+        async function clearChat() {
+            try {
+                // Clear local state
+                document.getElementById('chatbot-messages').innerHTML = '';
+                sessionId = null;
+                
+                // Create new session
+                const response = await fetch(`${CHATBOT_BASE_URL}/session`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${REALTOR_API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({})
+                });
+                
+                const data = await response.json();
+                sessionId = data.sessionId;
+                
+                // Add welcome message
+                addMessage('assistant', 'Hi! I\'m here to help you find your perfect property. What are you looking for?');
+            } catch (error) {
+                console.error('Failed to clear chat:', error);
+                addMessage('assistant', 'Sorry, I\'m having trouble starting a new conversation. Please try again.');
+            }
+        }
+        
+        // Handle Enter key
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+        
+        // Make functions global
+        window.toggleChatbot = toggleChatbot;
+        window.handleKeyPress = handleKeyPress;
+        window.sendMessage = sendMessage;
+        window.clearChat = clearChat;
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initChatbot);
+    </script>
+</body>
+</html>

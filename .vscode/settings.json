@@ -1,0 +1,26 @@
+{
+  "tailwindCSS.experimental.classRegex": [
+    ["cva(?:<[^>]*>)?(([^)]*))", "[\"'`]([^\"'`]*).*?[\"'`]", "(?:twMerge|twJoin)\\(([^\\);]*)[\\);]"]
+  ],
+
+    // --- TypeScript background diagnostics ---
+    "typescript.tsserver.experimental.enableProjectDiagnostics": true,
+    "typescript.validate.enable": true,
+  
+    // --- ESLint workspace validation ---
+    "eslint.enable": true,
+    "eslint.run": "onType",
+    "eslint.alwaysShowStatus": true,
+    "eslint.workingDirectories": [{ "mode": "auto" }],
+    "eslint.validate": [
+      "javascript",
+      "javascriptreact",
+      "typescript",
+      "typescriptreact"
+    ],
+  
+    // --- File-explorer decorations ---
+    "problems.decorations.enabled": true,
+    "explorer.decorations.badges": true,
+    "explorer.decorations.colors": true
+  }

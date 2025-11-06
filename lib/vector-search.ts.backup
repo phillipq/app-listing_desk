@@ -1,0 +1,1022 @@
+import { createClient } from '@supabase/supabase-js'
+import OpenAI from 'openai'
+import { prisma } from './prisma'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+})
+
+export interface PropertyEmbedding {
+  mlsId: string
+  propertyData: any
+  descriptionEmbedding?: number[]
+  featuresEmbedding?: number[]
+  combinedEmbedding?: number[]
+}
+
+export class VectorSearchService {
+  // Generate embeddings for property text
+  async generateEmbeddings(property: any): Promise<PropertyEmbedding> {
+    try {
+      // Handle both our internal format and Repliers API format
+      const isRepliersFormat = property.details && property.address
+      
+      let descriptionText = ''
+      let featuresText = ''
+      let amenitiesText = ''
+      let neighborhoodText = ''
+      let heatingText = ''
+      let coolingText = ''
+      let extrasText = ''
+      let styleText = ''
+      let flooringText = ''
+      let foundationText = ''
+      let combinedText = ''
+
+      if (isRepliersFormat) {
+        // Repliers API format - safely handle all fields with null/empty/N/A checks
+        const details = property.details || {}
+        const address = property.address || {}
+        
+        // Helper function to safely extract text values
+        const safeText = (value: any): string => {
+          if (value === null || value === undefined || value === '' || value === 'N/A' || value === 'null') {
+            return ''
+          }
+          return String(value).trim()
+        }
+        
+        // Helper function to safely extract numeric values
+        const safeNumber = (value: any): number => {
+          if (value === null || value === undefined || value === '' || value === 'N/A') {
+            return 0
+          }
+          const num = Number(value)
+          return isNaN(num) ? 0 : num
+        }
+        
+        descriptionText = safeText(details.description)
+        
+        // Features - comprehensive list of all possible features
+        featuresText = [
+          safeText(details.extras),
+          safeText(details.airConditioning),
+          safeText(details.heating),
+          safeText(details.centralVac),
+          safeText(details.elevator),
+          safeText(details.swimmingPool),
+          safeText(details.patio),
+          safeText(details.balcony),
+          safeText(details.garage),
+          safeText(details.familyRoom),
+          safeText(details.den),
+          safeText(details.basement1),
+          safeText(details.basement2),
+          safeText(details.driveway),
+          safeText(details.laundryLevel),
+          safeText(details.storageType),
+          safeText(details.constructionStatus),
+          safeText(details.constructionStyleSplitLevel),
+          safeText(details.loadingType),
+          safeText(details.ceilingType)
+        ].filter(Boolean).join(' ')
+        
+        // Amenities - comprehensive list of all possible amenities
+        amenitiesText = [
+          safeText(details.landscapeFeatures),
+          safeText(details.fireProtection),
+          safeText(details.handicappedEquipped),
+          safeText(details.centralAirConditioning),
+          safeText(details.centralVac),
+          safeText(details.greenPropertyInformationStatement),
+          safeText(details.commonElementsIncluded),
+          safeText(details.energyCertification),
+          safeText(details.certificationLevel),
+          safeText(details.waterfront),
+          safeText(details.viewType),
+          safeText(details.liveStreamEventURL)
+        ].filter(Boolean).join(' ')
+        
+        neighborhoodText = safeText(address.neighborhood)
+        heatingText = safeText(details.heating)
+        coolingText = safeText(details.airConditioning)
+        extrasText = safeText(details.extras)
+        styleText = safeText(details.style)
+        flooringText = safeText(details.flooringType)
+        foundationText = safeText(details.foundationType)
+        
+        // Create comprehensive combined text for Repliers data with safe handling
+        combinedText = [
+          // Address info
+          safeText(address.streetNumber),
+          safeText(address.streetName),
+          safeText(address.streetSuffix),
+          safeText(address.city),
+          safeText(address.state),
+          safeText(address.zip),
+          safeText(address.neighborhood),
+          safeText(address.area),
+          
+          // Property details
+          `${safeNumber(details.numBedrooms)} bedroom${safeNumber(details.numBedrooms) !== 1 ? 's' : ''}`,
+          `${safeNumber(details.numBathrooms)} bathroom${safeNumber(details.numBathrooms) !== 1 ? 's' : ''}`,
+          `${safeNumber(details.numBathroomsHalf)} half bathroom${safeNumber(details.numBathroomsHalf) !== 1 ? 's' : ''}`,
+          safeText(details.propertyType),
+          safeText(details.style),
+          safeText(property.class),
+          safeText(property.status),
+          safeText(property.type),
+          
+          // Size and features
+          safeText(details.sqft) ? `${safeText(details.sqft)} square feet` : '',
+          safeNumber(details.numRooms) ? `${safeNumber(details.numRooms)} rooms` : '',
+          safeNumber(details.numGarageSpaces) ? `${safeNumber(details.numGarageSpaces)} garage spaces` : '',
+          safeText(details.yearBuilt) ? `built in ${safeText(details.yearBuilt)}` : '',
+          safeNumber(details.numFireplaces) ? `${safeNumber(details.numFireplaces)} fireplace${safeNumber(details.numFireplaces) !== 1 ? 's' : ''}` : '',
+          
+          // Features and amenities - comprehensive list
+          safeText(details.extras),
+          safeText(details.airConditioning),
+          safeText(details.heating),
+          safeText(details.flooringType),
+          safeText(details.foundationType),
+          safeText(details.roofMaterial),
+          safeText(details.landscapeFeatures),
+          safeText(details.swimmingPool),
+          safeText(details.patio),
+          safeText(details.balcony),
+          safeText(details.garage),
+          safeText(details.familyRoom),
+          safeText(details.den),
+          safeText(details.basement1),
+          safeText(details.basement2),
+          safeText(details.centralVac),
+          safeText(details.elevator),
+          safeText(details.handicappedEquipped),
+          safeText(details.centralAirConditioning),
+          safeText(details.driveway),
+          safeText(details.laundryLevel),
+          safeText(details.storageType),
+          safeText(details.constructionStatus),
+          safeText(details.constructionStyleSplitLevel),
+          safeText(details.loadingType),
+          safeText(details.ceilingType),
+          safeText(details.greenPropertyInformationStatement),
+          safeText(details.commonElementsIncluded),
+          safeText(details.energyCertification),
+          safeText(details.certificationLevel),
+          safeText(details.waterfront),
+          safeText(details.viewType),
+          safeText(details.liveStreamEventURL),
+          
+          // Utilities and systems
+          safeText(details.sewer),
+          safeText(details.waterSource),
+          safeText(details.zoning),
+          safeText(details.zoningDescription),
+          safeText(details.zoningType),
+          
+          // HOA and fees
+          safeText(details.HOAFee) ? `HOA fee $${safeText(details.HOAFee)}` : '',
+          safeText(details.HOAFee2) ? `HOA fee 2 $${safeText(details.HOAFee2)}` : '',
+          safeText(details.HOAFee3) ? `HOA fee 3 $${safeText(details.HOAFee3)}` : '',
+          
+          // Additional details
+          descriptionText,
+          safeText(details.virtualTourUrl),
+          safeText(details.alternateURLVideoLink),
+          safeText(details.moreInformationLink),
+          safeText(details.analyticsClick),
+          
+          // Market info
+          property.listDate ? `listed ${new Date(property.listDate).toLocaleDateString()}` : '',
+          property.soldDate ? `sold ${new Date(property.soldDate).toLocaleDateString()}` : '',
+          property.originalPrice ? `originally $${property.originalPrice.toLocaleString()}` : '',
+          safeText(property.assignment),
+          safeText(property.lastStatus),
+          safeNumber(property.daysOnMarket) ? `on market ${safeNumber(property.daysOnMarket)} days` : ''
+        ].filter(Boolean).join(' ').trim() || 'property listing'
+        
+      } else {
+        // Our internal format (existing logic)
+        descriptionText = property.description || ''
+        featuresText = property.features?.join(' ') || ''
+        amenitiesText = property.amenities?.join(' ') || ''
+        neighborhoodText = property.neighborhood || ''
+        heatingText = property.heating || ''
+        coolingText = property.cooling || ''
+        
+        combinedText = [
+          property.address,
+          property.city,
+          property.province,
+          property.postalCode,
+          property.neighborhood,
+          `${property.bedrooms} bedroom${property.bedrooms !== 1 ? 's' : ''}`,
+          `${property.bathrooms} bathroom${property.bathrooms !== 1 ? 's' : ''}`,
+          property.propertyType,
+          property.status,
+          property.squareFootage ? `${property.squareFootage} square feet` : '',
+          property.lotSize ? `${property.lotSize} acres` : '',
+          property.yearBuilt ? `built in ${property.yearBuilt}` : '',
+          property.pricePerSqft ? `$${property.pricePerSqft} per sq ft` : '',
+          featuresText,
+          amenitiesText,
+          property.parking || '',
+          heatingText,
+          coolingText,
+          descriptionText,
+          property.listingAgent || '',
+          property.listingOffice || '',
+          property.virtualTour || '',
+          property.daysOnMarket ? `on market ${property.daysOnMarket} days` : '',
+          property.listDate ? `listed ${new Date(property.listDate).toLocaleDateString()}` : '',
+          property.soldDate ? `sold ${new Date(property.soldDate).toLocaleDateString()}` : ''
+        ].filter(Boolean).join(' ').trim() || 'property listing'
+      }
+
+      console.log(`📝 Generated combined text for ${property.mlsNumber || property.mlsId}: ${combinedText.substring(0, 200)}...`)
+
+      // Generate embeddings for different aspects
+      const [descriptionEmbedding, featuresEmbedding, combinedEmbedding] = await Promise.all([
+        this.createEmbedding(descriptionText || 'no description'),
+        this.createEmbedding(featuresText || 'no features'),
+        this.createEmbedding(combinedText)
+      ])
+
+      return {
+        mlsId: property.mlsNumber || property.mlsId,
+        propertyData: property,
+        descriptionEmbedding,
+        featuresEmbedding,
+        combinedEmbedding
+      }
+    } catch (error) {
+      console.error('Error generating embeddings:', error)
+      throw error
+    }
+  }
+
+  // Create embedding using OpenAI
+  private async createEmbedding(text: string): Promise<number[]> {
+    // If text is empty, use a default placeholder to ensure we get a valid embedding
+    const inputText = text.trim() || 'property listing'
+    
+    const response = await openai.embeddings.create({
+      model: 'text-embedding-3-small',
+      input: inputText
+    })
+    
+    return response.data[0]?.embedding || []
+  }
+
+  // Store property embeddings using raw SQL
+  async storePropertyEmbedding(embedding: PropertyEmbedding): Promise<void> {
+    try {
+      await prisma.$executeRaw`
+        INSERT INTO "PropertyEmbedding" (
+          "id", "mlsId", "propertyData", 
+          "descriptionEmbedding", "featuresEmbedding", "combinedEmbedding",
+          "createdAt", "updatedAt"
+        ) VALUES (
+          gen_random_uuid(), ${embedding.mlsId}, ${JSON.stringify(embedding.propertyData)}::jsonb,
+          ${JSON.stringify(embedding.descriptionEmbedding)}::vector,
+          ${JSON.stringify(embedding.featuresEmbedding)}::vector,
+          ${JSON.stringify(embedding.combinedEmbedding)}::vector,
+          NOW(), NOW()
+        )
+        ON CONFLICT ("mlsId") 
+        DO UPDATE SET
+          "propertyData" = ${JSON.stringify(embedding.propertyData)}::jsonb,
+          "descriptionEmbedding" = ${JSON.stringify(embedding.descriptionEmbedding)}::vector,
+          "featuresEmbedding" = ${JSON.stringify(embedding.featuresEmbedding)}::vector,
+          "combinedEmbedding" = ${JSON.stringify(embedding.combinedEmbedding)}::vector,
+          "updatedAt" = NOW()
+      `
+    } catch (error) {
+      console.error('Error storing property embedding:', error)
+      throw error
+    }
+  }
+
+  // Search for similar properties using vector similarity
+  async searchSimilarProperties(
+    query: string,
+    filters: {
+      location?: string
+      minPrice?: number
+      maxPrice?: number
+      propertyType?: string
+      bedrooms?: number
+      bathrooms?: number
+    },
+    limit: number = 15
+  ): Promise<any[]> {
+    try {
+      // Generate embedding for the search query
+      const queryEmbedding = await this.createEmbedding(query)
+      
+      if (queryEmbedding.length === 0) {
+        console.log('No query embedding generated, falling back to traditional search')
+        return await this.fallbackTraditionalSearch(filters, limit, query)
+      }
+
+      console.log(`🔍 Performing vector similarity search for: "${query}"`)
+      console.log(`📊 Query embedding dimensions: ${queryEmbedding.length}`)
+
+      // Try vector search first
+      try {
+        console.log('🔍 Attempting vector similarity search...')
+        
+        // Use raw SQL for vector similarity search
+        const results = await prisma.$queryRaw`
+          SELECT 
+            p.*,
+            pe."combinedEmbedding",
+            (1 - (pe."combinedEmbedding" <=> ${queryEmbedding}::vector)) as similarity_score
+          FROM "Property" p
+          LEFT JOIN "PropertyEmbedding" pe ON p."mlsId" = pe."mlsId"
+          WHERE p."isActive" = true
+            AND pe."combinedEmbedding" IS NOT NULL
+          ORDER BY pe."combinedEmbedding" <=> ${queryEmbedding}::vector
+          LIMIT ${limit * 2}
+        `
+        
+        console.log(`📊 Vector search found ${(results as any[]).length} properties`)
+        
+        if ((results as any[]).length > 0) {
+          // Apply additional filters to vector results
+          const filteredResults = (results as any[]).filter(item => {
+            const property = item
+            
+            // Apply property type filter
+            if (filters.propertyType) {
+              const propertyTypeMap: { [key: string]: string[] } = {
+                'house': ['residential'],
+                'home': ['residential'],
+                'residential': ['residential'],
+                'land': ['land'],
+                'lease': ['residential lease']
+              }
+              
+              const mappedTypes = propertyTypeMap[filters.propertyType.toLowerCase()] || [filters.propertyType]
+              if (!mappedTypes.includes(property.propertyType)) return false
+            }
+            
+            // Apply bedroom filter
+            if (filters.bedrooms && property.bedrooms < filters.bedrooms) return false
+            
+            // Apply bathroom filter
+            if (filters.bathrooms && property.bathrooms < filters.bathrooms) return false
+            
+            // Apply price filters
+            if (filters.minPrice && property.price < filters.minPrice) return false
+            if (filters.maxPrice && property.price > filters.maxPrice) return false
+            
+            return true
+          })
+          
+          console.log(`📊 After filtering: ${filteredResults.length} properties`)
+          
+          return filteredResults.slice(0, limit).map(property => ({
+            ...property,
+            similarity_score: property.similarity_score || 0,
+            vector_distance: 1 - (property.similarity_score || 0)
+          }))
+        }
+      } catch (vectorError) {
+        console.error('Vector search failed, falling back to traditional search:', vectorError)
+      }
+      
+      // Fall back to traditional search if vector search fails
+      console.log('🔍 Falling back to traditional search')
+      return await this.fallbackTraditionalSearch(filters, limit, query)
+    } catch (error) {
+      console.error('Error in vector search:', error)
+      return await this.fallbackTraditionalSearch(filters, limit, query)
+    }
+  }
+
+  // Fallback to traditional search when vector search fails
+          const details = property.details || {}
+          const address = property.address || {}
+          
+          // Helper functions for safe text extraction
+          const safeText = (value: any): string => {
+            if (value === null || value === undefined || value === '' || value === 'N/A' || value === 'null') {
+              return ''
+            }
+            return String(value).trim()
+          }
+          
+          const safeNumber = (value: any): number => {
+            if (value === null || value === undefined || value === '' || value === 'N/A') {
+              return 0
+            }
+            const num = Number(value)
+            return isNaN(num) ? 0 : num
+          }
+          
+          searchableText = [
+            // Address info
+            safeText(address.streetNumber),
+            safeText(address.streetName),
+            safeText(address.streetSuffix),
+            safeText(address.city),
+            safeText(address.state),
+            safeText(address.zip),
+            safeText(address.neighborhood),
+            safeText(address.area),
+            
+            // Property details
+            safeText(details.propertyType),
+            safeText(details.style),
+            safeText(property.class),
+            safeText(property.status),
+            safeText(property.type),
+            `${safeNumber(details.numBedrooms)} bedroom`,
+            `${safeNumber(details.numBathrooms)} bathroom`,
+            `${safeNumber(details.numBathroomsHalf)} half bathroom`,
+            
+            // Size and features
+            safeText(details.sqft) ? `${safeText(details.sqft)} square feet` : '',
+            safeNumber(details.numRooms) ? `${safeNumber(details.numRooms)} rooms` : '',
+            safeNumber(details.numGarageSpaces) ? `${safeNumber(details.numGarageSpaces)} garage` : '',
+            safeText(details.yearBuilt) ? `built in ${safeText(details.yearBuilt)}` : '',
+            safeNumber(details.numFireplaces) ? `${safeNumber(details.numFireplaces)} fireplace` : '',
+            
+            // Features and amenities - comprehensive list
+            safeText(details.extras),
+            safeText(details.airConditioning),
+            safeText(details.heating),
+            safeText(details.flooringType),
+            safeText(details.foundationType),
+            safeText(details.roofMaterial),
+            safeText(details.landscapeFeatures),
+            safeText(details.swimmingPool),
+            safeText(details.patio),
+            safeText(details.balcony),
+            safeText(details.garage),
+            safeText(details.familyRoom),
+            safeText(details.den),
+            safeText(details.basement1),
+            safeText(details.basement2),
+            safeText(details.centralVac),
+            safeText(details.elevator),
+            safeText(details.handicappedEquipped),
+            safeText(details.centralAirConditioning),
+            safeText(details.driveway),
+            safeText(details.laundryLevel),
+            safeText(details.storageType),
+            safeText(details.constructionStatus),
+            safeText(details.constructionStyleSplitLevel),
+            safeText(details.loadingType),
+            safeText(details.ceilingType),
+            safeText(details.greenPropertyInformationStatement),
+            safeText(details.commonElementsIncluded),
+            safeText(details.energyCertification),
+            safeText(details.certificationLevel),
+            safeText(details.waterfront),
+            safeText(details.viewType),
+            safeText(details.liveStreamEventURL),
+            
+            // Utilities and systems
+            safeText(details.sewer),
+            safeText(details.waterSource),
+            safeText(details.zoning),
+            safeText(details.zoningDescription),
+            safeText(details.zoningType),
+            
+            // HOA and fees
+            safeText(details.HOAFee) ? `HOA fee $${safeText(details.HOAFee)}` : '',
+            safeText(details.HOAFee2) ? `HOA fee 2 $${safeText(details.HOAFee2)}` : '',
+            safeText(details.HOAFee3) ? `HOA fee 3 $${safeText(details.HOAFee3)}` : '',
+            
+            // Additional details
+            safeText(details.description),
+            safeText(details.virtualTourUrl),
+            safeText(details.alternateURLVideoLink),
+            safeText(details.moreInformationLink),
+            safeText(details.analyticsClick),
+            
+            // Market info
+            property.originalPrice ? `originally $${property.originalPrice.toLocaleString()}` : '',
+            safeText(property.assignment),
+            safeText(property.lastStatus),
+            safeNumber(property.daysOnMarket) ? `on market ${safeNumber(property.daysOnMarket)} days` : ''
+          ].join(' ').toLowerCase()
+          
+        } else {
+          // Our internal format
+          searchableText = [
+            property.address,
+            property.city,
+            property.province,
+            property.postalCode,
+            property.neighborhood,
+            property.propertyType,
+            property.status,
+            `${property.bedrooms} bedroom`,
+            `${property.bathrooms} bathroom`,
+            property.squareFootage ? `${property.squareFootage} square feet` : '',
+            property.lotSize ? `${property.lotSize} acres` : '',
+            property.yearBuilt ? `built in ${property.yearBuilt}` : '',
+            ...(property.features || []),
+            ...(property.amenities || []),
+            property.parking || '',
+            property.heating || '',
+            property.cooling || '',
+            property.description || '',
+            property.listingAgent || '',
+            property.listingOffice || '',
+            property.virtualTour || ''
+          ].join(' ').toLowerCase()
+        }
+        
+        return searchableText.includes(queryLower)
+      })
+
+      console.log(`📊 After text filtering: ${filteredResults.length} results`)
+
+      // Return results with actual similarity scores from the database
+      const finalResults = filteredResults.map((item, index) => ({
+        ...item.propertyData,
+        similarity_score: item.similarity || (0.9 - index * 0.1),
+        vector_distance: item.distance || (0.1 + index * 0.05)
+      }))
+
+      // Apply additional filters if needed
+      let additionalFilteredResults = finalResults
+
+      if (filters.location) {
+        additionalFilteredResults = additionalFilteredResults.filter(item => 
+          item.city?.toLowerCase().includes(filters.location!.toLowerCase()) ||
+          item.address?.toLowerCase().includes(filters.location!.toLowerCase())
+        )
+      }
+
+      if (filters.minPrice) {
+        additionalFilteredResults = additionalFilteredResults.filter(item => item.price >= filters.minPrice!)
+      }
+
+      if (filters.maxPrice) {
+        additionalFilteredResults = additionalFilteredResults.filter(item => item.price <= filters.maxPrice!)
+      }
+
+      if (filters.propertyType) {
+        additionalFilteredResults = additionalFilteredResults.filter(item => 
+          item.propertyType?.toLowerCase().includes(filters.propertyType!.toLowerCase())
+        )
+      }
+
+      if (filters.bedrooms) {
+        additionalFilteredResults = additionalFilteredResults.filter(item => item.bedrooms >= filters.bedrooms!)
+      }
+
+      if (filters.bathrooms) {
+        additionalFilteredResults = additionalFilteredResults.filter(item => item.bathrooms >= filters.bathrooms!)
+      }
+
+      console.log(`📊 After filtering: ${additionalFilteredResults.length} results`)
+      return additionalFilteredResults
+
+    } catch (error) {
+      console.error('Error in vector search:', error)
+      // Fall back to traditional search
+      return await this.fallbackTraditionalSearch(filters, limit)
+    }
+  }
+
+  // Fallback to traditional search when vector search fails
+  private async fallbackTraditionalSearch(
+    filters: {
+      location?: string
+      minPrice?: number
+      maxPrice?: number
+      propertyType?: string
+      bedrooms?: number
+      bathrooms?: number
+    },
+    limit: number = 15,
+    query?: string
+  ): Promise<any[]> {
+    try {
+      console.log('🔍 Using traditional database search as fallback')
+      
+      // Build Prisma query for Property table
+      const whereClause: any = {
+        isActive: true
+      }
+
+      // Add location filter
+      if (filters.location) {
+        whereClause.OR = [
+          { city: { contains: filters.location, mode: 'insensitive' } },
+          { province: { contains: filters.location, mode: 'insensitive' } },
+          { address: { contains: filters.location, mode: 'insensitive' } }
+        ]
+      }
+
+      // Add price filters
+      if (filters.minPrice || filters.maxPrice) {
+        whereClause.price = {}
+        if (filters.minPrice) whereClause.price.gte = filters.minPrice
+        if (filters.maxPrice) whereClause.price.lte = filters.maxPrice
+      }
+
+      // Add property type filter
+      if (filters.propertyType) {
+        // Map common property type requests to actual database values
+        const propertyTypeMap: { [key: string]: string[] } = {
+          'house': ['residential'],
+          'home': ['residential'],
+          'residential': ['residential'],
+          'land': ['land'],
+          'lease': ['residential lease']
+        }
+        
+        const mappedTypes = propertyTypeMap[filters.propertyType.toLowerCase()] || [filters.propertyType]
+        whereClause.propertyType = { in: mappedTypes }
+      }
+
+      // Add bedroom filter
+      if (filters.bedrooms) {
+        whereClause.bedrooms = { gte: filters.bedrooms }
+      }
+
+      // Add bathroom filter
+      if (filters.bathrooms) {
+        whereClause.bathrooms = { gte: filters.bathrooms }
+      }
+
+      console.log('📊 Search filters:', whereClause)
+
+      // Query the Property table directly
+      const properties = await prisma.property.findMany({
+        where: whereClause,
+        select: {
+          id: true,
+          mlsId: true,
+          address: true,
+          city: true,
+          province: true,
+          postalCode: true,
+          price: true,
+          bedrooms: true,
+          bathrooms: true,
+          propertyType: true,
+          squareFootage: true,
+          description: true,
+          images: true,
+          yearBuilt: true,
+          lotSize: true,
+          heating: true,
+          cooling: true,
+          parking: true,
+          neighborhood: true,
+          status: true,
+          daysOnMarket: true,
+          rawData: true
+        },
+        orderBy: { price: 'asc' },
+        take: limit * 2 // Get more results for text filtering
+      })
+
+      console.log(`📊 Found ${properties.length} properties from database`)
+
+      // Apply text-based semantic matching on descriptions and raw data
+      const textFilteredProperties = properties.filter(property => {
+        const searchableText = [
+          property.description || '',
+          property.address || '',
+          property.city || '',
+          property.province || '',
+          property.neighborhood || '',
+          property.heating || '',
+          property.cooling || '',
+          property.parking || '',
+          // Extract text from rawData if available
+          ...(property.rawData ? this.extractTextFromRawData(property.rawData) : [])
+        ].join(' ').toLowerCase()
+
+        // If we have a specific query, use it for matching
+        if (query && query.trim()) {
+          const queryTerms = query.toLowerCase().split(/\s+/)
+          return queryTerms.some(term => searchableText.includes(term))
+        }
+
+        // Fallback to general property terms if no specific query
+        const searchTerms = [
+          'covered deck', 'deck', 'outdoor', 'patio', 'porch',
+          'luxury', 'custom', 'premium', 'high-end', 'gourmet',
+          'fireplace', 'kitchen', 'dining', 'entertaining',
+          'mountain views', 'lake', 'golf', 'gated', 'private',
+          'doors', 'floor to ceiling', 'stone', 'alder'
+        ]
+
+        return searchTerms.some(term => searchableText.includes(term.toLowerCase()))
+      })
+
+      console.log(`📊 After text filtering: ${textFilteredProperties.length} properties`)
+
+      return textFilteredProperties.slice(0, limit).map(property => ({
+        ...property,
+        similarity_score: 0.8, // Higher score for text-matched properties
+        vector_distance: 0.2
+      })) || []
+
+    } catch (error) {
+      console.error('Fallback traditional search error:', error)
+      return []
+    }
+  }
+
+  // Helper method to extract searchable text from rawData
+  private extractTextFromRawData(rawData: any): string[] {
+    const textParts: string[] = []
+    
+    try {
+      // Extract from details object
+      if (rawData.details) {
+        const details = rawData.details
+        textParts.push(
+          details.description || '',
+          details.airConditioning || '',
+          details.heating || '',
+          details.exteriorConstruction1 || '',
+          details.style || '',
+          details.flooringType || '',
+          details.foundationType || '',
+          details.roofMaterial || '',
+          details.sewer || '',
+          details.waterSource || '',
+          details.zoning || '',
+          details.extras || '',
+          details.patio || '',
+          details.swimmingPool || '',
+          details.garage || '',
+          details.centralVac || '',
+          details.elevator || '',
+          details.furnished || '',
+          details.handicappedEquipped || '',
+          details.landscapeFeatures || '',
+          details.fireProtection || '',
+          details.businessType || '',
+          details.businessSubType || '',
+          details.storageType || '',
+          details.constructionStatus || '',
+          details.loadingType || '',
+          details.ceilingType || '',
+          details.energuideRating || '',
+          details.certificationLevel || '',
+          details.energyCertification || '',
+          details.greenPropertyInformationStatement || '',
+          details.commonElementsIncluded || '',
+          details.waterfront || '',
+          details.livingAreaMeasurement || '',
+          details.sqftRange || '',
+          details.landAccessType || '',
+          details.landSewer || '',
+          details.viewType || '',
+          details.zoningDescription || '',
+          details.landDisposition || '',
+          details.farmType || '',
+          details.zoningType || '',
+          details.landscapeFeatures || '',
+          details.fireProtection || '',
+          details.roofMaterial || '',
+          details.farmType || '',
+          details.zoningType || '',
+          details.businessType || '',
+          details.businessSubType || '',
+          details.landDisposition || '',
+          details.storageType || '',
+          details.constructionStyleSplitLevel || '',
+          details.constructionStatus || '',
+          details.loadingType || '',
+          details.ceilingType || '',
+          details.liveStreamEventURL || '',
+          details.energuideRating || '',
+          details.amperage || '',
+          details.sewer || '',
+          details.familyRoom || '',
+          details.zoning || '',
+          details.driveway || '',
+          details.leaseTerms || '',
+          details.centralAirConditioning || '',
+          details.certificationLevel || '',
+          details.energyCertification || '',
+          details.parkCostMonthly || '',
+          details.commonElementsIncluded || '',
+          details.greenPropertyInformationStatement || '',
+          details.handicappedEquipped || '',
+          details.laundryLevel || '',
+          details.numKitchens || '',
+          details.numKitchensPlus || '',
+          details.sqftRange || '',
+          details.numDrivewaySpaces || '',
+          details.HOAFee || '',
+          details.HOAFee2 || '',
+          details.HOAFee3 || '',
+          details.waterSource || '',
+          details.livingAreaMeasurement || '',
+          details.waterfront || '',
+          details.bathrooms || '',
+          details.numBathroomsHalf || ''
+        )
+      }
+
+      // Extract from address object
+      if (rawData.address) {
+        const address = rawData.address
+        textParts.push(
+          address.streetNumber || '',
+          address.streetName || '',
+          address.streetSuffix || '',
+          address.city || '',
+          address.state || '',
+          address.zip || '',
+          address.neighborhood || '',
+          address.area || '',
+          address.district || '',
+          address.majorIntersection || ''
+        )
+      }
+
+      // Extract from rooms array
+      if (rawData.rooms && Array.isArray(rawData.rooms)) {
+        rawData.rooms.forEach((room: any) => {
+          textParts.push(
+            room.description || '',
+            room.features || '',
+            room.features2 || '',
+            room.features3 || '',
+            room.level || ''
+          )
+        })
+      }
+
+      // Extract from agents array
+      if (rawData.agents && Array.isArray(rawData.agents)) {
+        rawData.agents.forEach((agent: any) => {
+          textParts.push(
+            agent.name || '',
+            agent.position || '',
+            agent.email || '',
+            ...(agent.phones || [])
+          )
+        })
+      }
+
+      // Extract from office object
+      if (rawData.office) {
+        textParts.push(rawData.office.brokerageName || '')
+      }
+
+      // Extract from nearby amenities
+      if (rawData.nearby?.amenities && Array.isArray(rawData.nearby.amenities)) {
+        textParts.push(...rawData.nearby.amenities)
+      }
+
+      // Extract from lot object
+      if (rawData.lot) {
+        textParts.push(
+          rawData.lot.legalDescription || '',
+          rawData.lot.features || '',
+          rawData.lot.source || '',
+          rawData.lot.dimensionsSource || '',
+          rawData.lot.dimensions || '',
+          rawData.lot.taxLot || ''
+        )
+      }
+
+      // Extract from taxes object
+      if (rawData.taxes) {
+        textParts.push(
+          rawData.taxes.assessmentYear || '',
+          rawData.taxes.annualAmount ? `$${rawData.taxes.annualAmount}` : ''
+        )
+      }
+
+      // Extract from timestamps object
+      if (rawData.timestamps) {
+        textParts.push(
+          rawData.timestamps.listingUpdated || '',
+          rawData.timestamps.photosUpdated || '',
+          rawData.timestamps.conditionalExpiryDate || '',
+          rawData.timestamps.terminatedDate || '',
+          rawData.timestamps.suspendedDate || '',
+          rawData.timestamps.listingEntryDate || '',
+          rawData.timestamps.closedDate || '',
+          rawData.timestamps.unavailableDate || '',
+          rawData.timestamps.expiryDate || '',
+          rawData.timestamps.extensionEntryDate || '',
+          rawData.timestamps.possessionDate || '',
+          rawData.timestamps.repliersUpdatedOn || '',
+          rawData.timestamps.imageInsightsUpdatedOn || ''
+        )
+      }
+
+      // Extract from estimate object
+      if (rawData.estimate) {
+        textParts.push(
+          rawData.estimate.value ? `estimated $${rawData.estimate.value}` : '',
+          rawData.estimate.high ? `high estimate $${rawData.estimate.high}` : '',
+          rawData.estimate.low ? `low estimate $${rawData.estimate.low}` : '',
+          rawData.estimate.confidence ? `${rawData.estimate.confidence} confidence` : ''
+        )
+      }
+
+      // Extract from imageInsights object
+      if (rawData.imageInsights) {
+        textParts.push(
+          rawData.imageInsights.summary?.quality?.qualitative?.overall || '',
+          rawData.imageInsights.summary?.quality?.qualitative?.features?.backOfStructure || ''
+        )
+        
+        if (rawData.imageInsights.images && Array.isArray(rawData.imageInsights.images)) {
+          rawData.imageInsights.images.forEach((img: any) => {
+            textParts.push(
+              img.classification?.imageOf || '',
+              img.quality?.qualitative || ''
+            )
+          })
+        }
+      }
+
+    } catch (error) {
+      console.error('Error extracting text from rawData:', error)
+    }
+
+    return textParts.filter(text => text && text.trim().length > 0)
+  }
+
+  // Search by must-haves and nice-to-haves using semantic similarity
+  async searchByRequirements(
+    mustHaves: string[],
+    niceToHaves: string[],
+    filters: any,
+    limit: number = 15
+  ): Promise<any[]> {
+    try {
+      // Create search query from requirements
+      const searchQuery = `${mustHaves.join(' ')} ${niceToHaves.join(' ')}`
+      
+      // Search for similar properties
+      const results = await this.searchSimilarProperties(searchQuery, filters, limit)
+      
+      // Calculate match scores based on how well they match requirements
+      return results.map(property => {
+        const propertyText = `${property.description || ''} ${property.features?.join(' ') || ''} ${property.amenities?.join(' ') || ''}`.toLowerCase()
+        
+        const mustHaveMatches = mustHaves.filter(requirement => 
+          propertyText.includes(requirement.toLowerCase())
+        )
+        
+        const niceToHaveMatches = niceToHaves.filter(requirement => 
+          propertyText.includes(requirement.toLowerCase())
+        )
+        
+        const matchScore = (mustHaveMatches.length / mustHaves.length) * 0.7 + 
+                          (niceToHaveMatches.length / niceToHaves.length) * 0.3
+        
+        return {
+          ...property,
+          matchScore,
+          mustHaveMatches,
+          niceToHaveMatches,
+          semanticSimilarity: property.similarity_score
+        }
+      }).sort((a, b) => b.matchScore - a.matchScore)
+
+    } catch (error) {
+      console.error('Error searching by requirements:', error)
+      // Return empty array instead of throwing to allow fallback to traditional search
+      return []
+    }
+  }
+
+  // Batch process properties to generate and store embeddings
+  async processPropertiesForEmbeddings(properties: any[]): Promise<void> {
+    console.log(`🔄 Processing ${properties.length} properties for embeddings...`)
+    
+    for (const property of properties) {
+      try {
+        const embedding = await this.generateEmbeddings(property)
+        await this.storePropertyEmbedding(embedding)
+        console.log(`✅ Processed property ${property.mlsId}`)
+      } catch (error) {
+        console.error(`❌ Error processing property ${property.mlsId}:`, error)
+      }
+    }
+    
+    console.log(`✅ Completed processing ${properties.length} properties`)
+  }
+}
+
+export const vectorSearchService = new VectorSearchService()

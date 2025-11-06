@@ -1,0 +1,537 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  expires      DateTime
+  realtorId    String
+  realtor      Realtor  @relation(fields: [realtorId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id                    String                 @id @default(cuid())
+  name                  String?
+  email                 String                 @unique
+  emailVerified         DateTime?
+  image                 String?
+  tier                  String                 @default("starter")
+  role                  String                 @default("business_owner")
+  subscriptionStatus    String                 @default("trial")
+  subscriptionId        String?
+  trialEndsAt           DateTime?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  accounts              Account[]
+  leads                 Lead[]
+  messages              Message[]
+  customers             Customer[]
+  services              Service[]
+  appointments          Appointment[]
+  communicationChannels CommunicationChannel[]
+  socialTokens          SocialToken[]
+  notifications         Notification[]
+}
+
+model Realtor {
+  id                 String             @id @default(cuid())
+  name               String?
+  email              String             @unique
+  domain             String?            @unique
+  password           String?
+  isAdmin            Boolean            @default(false)
+  isActive           Boolean            @default(true)
+  apiKey             String?            @unique
+  subscriptionStatus String             @default("inactive") // "active", "trial", "expired", "inactive"
+  stripeCustomerId   String?            @unique
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  facebookGroups     FacebookGroup[]
+  facebookListings   FacebookListing[]
+  leads              Lead[]
+  properties         Property[]
+  sessions           Session[]
+  customSearchTerms  CustomSearchTerm[]
+  trendingSearches   TrendingSearch[]
+  userPackages       UserPackage[]
+  subscriptions      Subscription[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Property {
+  id              String         @id @default(cuid())
+  mlsId           String?        @unique
+  address         String
+  city            String
+  province        String
+  price           Int
+  bedrooms        Int
+  bathrooms       Float
+  propertyType    String
+  squareFootage   Int?
+  yearBuilt       Int?
+  description     String?
+  images          String[]
+  status          String         @default("active")
+  listDate        DateTime?
+  daysOnMarket    Int?
+  latitude        Float?
+  longitude       Float?
+  facebookGroupId String?
+  facebookPostId  String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  rawData         Json?
+  realtorId       String
+  postalCode      String?
+  leads           Lead[]
+  facebookGroup   FacebookGroup? @relation(fields: [facebookGroupId], references: [id])
+  realtor         Realtor        @relation(fields: [realtorId], references: [id], onDelete: Cascade)
+}
+
+model Lead {
+  id             String         @id @default(cuid())
+  name           String
+  email          String
+  phone          String?
+  message        String
+  isLeadReady    Boolean        @default(false)
+  propertyId     String?
+  source         String         @default("chatbot")
+  status         String         @default("new")
+  userId         String?
+  user           User?          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  messages       Json?
+  aiSummary      String?
+  realtorId      String?
+  property       Property?      @relation(fields: [propertyId], references: [id])
+  realtor        Realtor?       @relation(fields: [realtorId], references: [id], onDelete: Cascade)
+  messageRecords Message[]
+  conversations  Conversation[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([source])
+}
+
+model FacebookGroup {
+  id             String     @id @default(cuid())
+  groupId        String
+  name           String
+  description    String?
+  url            String
+  isActive       Boolean    @default(true)
+  lastScraped    DateTime?
+  nextScrape     DateTime?
+  scrapeInterval Int        @default(24)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  realtorId      String
+  realtor        Realtor    @relation(fields: [realtorId], references: [id], onDelete: Cascade)
+  properties     Property[]
+
+  @@unique([groupId, realtorId])
+}
+
+model FacebookListing {
+  id           String   @id @default(cuid())
+  postId       String
+  groupId      String
+  title        String
+  description  String?
+  price        Int?
+  address      String?
+  city         String?
+  province     String?
+  bedrooms     Int?
+  bathrooms    Float?
+  propertyType String?
+  images       String[]
+  postedDate   DateTime
+  lastScraped  DateTime @default(now())
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  realtorId    String
+  realtor      Realtor  @relation(fields: [realtorId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, realtorId])
+}
+
+model Amenity {
+  id          String           @id @default(cuid())
+  profileId   String?
+  placeId     String?
+  name        String
+  category    String
+  latitude    Float
+  longitude   Float
+  address     String?
+  city        String?
+  province    String?
+  country     String?
+  phone       String?
+  website     String?
+  rating      Float?
+  priceLevel  Int?
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  profile     DistanceProfile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  travelTimes TravelTime[]
+}
+
+model TravelTime {
+  id          String   @id @default(cuid())
+  propertyId  String
+  amenityId   String
+  drivingTime Int?
+  walkingTime Int?
+  transitTime Int?
+  distance    Float?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  amenity     Amenity  @relation(fields: [amenityId], references: [id], onDelete: Cascade)
+
+  @@unique([propertyId, amenityId])
+}
+
+model DistanceProfile {
+  id             String  @id @default(cuid())
+  propertyId     String? // Nullable for ad-hoc profiles
+  profileName    String
+  description    String?
+  categories     Json
+  totalAmenities Int
+  averageTime    Float
+  isActive       Boolean @default(true)
+
+  // Ad-hoc profile fields
+  isAdHoc        Boolean @default(false)
+  adHocAddress   String?
+  adHocLatitude  Float?
+  adHocLongitude Float?
+  realtorId      String? // Realtor who created the profile
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  amenities Amenity[]
+
+  @@unique([propertyId, profileName]) // Note: For ad-hoc, propertyId is null so uniqueness is on profileName only
+  @@index([realtorId])
+  @@index([isAdHoc])
+  @@index([isAdHoc, realtorId])
+}
+
+model ShowingTour {
+  id             String   @id @default(cuid())
+  name           String
+  description    String?
+  properties     Json
+  schedule       Json
+  startTime      DateTime
+  endTime        DateTime
+  totalDuration  Int
+  totalDriveTime Int
+  canFitInWindow Boolean
+  googleMapsUrl  String?
+  userId         String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model CommunicationChannel {
+  id            String         @id @default(cuid())
+  name          String
+  type          String
+  isActive      Boolean        @default(true)
+  config        Json?
+  userId        String
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  messages      Message[]
+  conversations Conversation[]
+}
+
+model SocialToken {
+  id                  String    @id @default(cuid())
+  userId              String
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform            String // 'instagram', 'facebook', etc.
+  pageId              String? // Facebook Page ID
+  accessToken         String
+  refreshToken        String?
+  instagramBusinessId String? // Instagram Business Account ID
+  expiresAt           DateTime?
+  metadata            Json?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@unique([userId, platform, pageId])
+  @@index([userId])
+  @@index([platform])
+  @@index([expiresAt])
+}
+
+model Message {
+  id             String               @id @default(cuid())
+  channelId      String
+  channel        CommunicationChannel @relation(fields: [channelId], references: [id], onDelete: Restrict)
+  conversationId String?
+  conversation   Conversation?        @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  from           String
+  to             String
+  content        String
+  timestamp      DateTime
+  isIncoming     Boolean
+  source         String               @default("incoming") // incoming, outgoing_ai, outgoing_human, outgoing_native
+  platform       String // whatsapp, instagram, sms, voicemail
+  leadId         String?
+  lead           Lead?                @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  userId         String
+  user           User                 @relation(fields: [userId], references: [id], onDelete: Restrict)
+  metadata       Json?
+  // AI processing fields
+  aiProcessed    Boolean              @default(false)
+  aiResponse     String?
+  requiresHuman  Boolean              @default(false)
+  humanNotified  Boolean              @default(false)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  @@index([userId])
+  @@index([leadId])
+  @@index([channelId])
+  @@index([timestamp])
+  @@index([source])
+  @@index([platform])
+  @@index([requiresHuman])
+  @@index([humanNotified])
+}
+
+model Conversation {
+  id            String               @id @default(cuid())
+  leadId        String
+  lead          Lead                 @relation(fields: [leadId], references: [id], onDelete: Restrict)
+  channelId     String
+  channel       CommunicationChannel @relation(fields: [channelId], references: [id], onDelete: Restrict)
+  status        String               @default("active")
+  lastMessageAt DateTime?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  messages      Message[]
+
+  @@index([leadId])
+  @@index([channelId])
+}
+
+model Customer {
+  id           String        @id @default(cuid())
+  name         String
+  email        String?
+  phone        String?
+  company      String?
+  status       String        @default("active") // active, inactive, prospect, lead
+  source       String? // website, referral, cold_call, etc.
+  notes        String?
+  tags         String[] // Array of tags for categorization
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  appointments Appointment[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([source])
+}
+
+model Service {
+  id           String        @id @default(cuid())
+  name         String
+  description  String?
+  price        Float
+  duration     Int // Duration in minutes
+  isActive     Boolean       @default(true)
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  appointments Appointment[]
+
+  @@index([userId])
+  @@index([isActive])
+}
+
+model Appointment {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  startTime   DateTime
+  endTime     DateTime
+  status      String    @default("scheduled") // scheduled, confirmed, completed, cancelled, no_show
+  location    String? // Physical location or video call link
+  notes       String?
+  customerId  String?
+  customer    Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  serviceId   String?
+  service     Service?  @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([startTime])
+  @@index([status])
+  @@index([customerId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String // message_requires_human, new_lead, conversation_escalated
+  title     String
+  message   String
+  data      Json?
+  isRead    Boolean  @default(false)
+  priority  String   @default("medium") // low, medium, high, urgent
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([type])
+  @@index([priority])
+  @@index([createdAt])
+}
+
+model CustomSearchTerm {
+  id        String   @id @default(cuid())
+  keyword   String
+  location  String? // Optional city/province override
+  category  String? // Optional category for organization
+  isActive  Boolean  @default(true)
+  realtorId String
+  realtor   Realtor  @relation(fields: [realtorId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([realtorId])
+  @@index([isActive])
+}
+
+model TrendingSearch {
+  id             String   @id @default(cuid())
+  keyword        String
+  location       String // City or province
+  category       String? // "property_type", "neighborhood", "amenity", "general"
+  searchVolume   Int?
+  trendDirection String? // "up", "down", "stable"
+  rank           Int?
+  trendData      Json? // Historical trend data points
+  lastUpdated    DateTime @default(now())
+  realtorId      String
+  realtor        Realtor  @relation(fields: [realtorId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([realtorId, location])
+  @@index([category, location])
+  @@index([lastUpdated])
+}
+
+// Package System Models
+
+model Package {
+  id            String   @id @default(cuid())
+  name          String // "Real Estate", "Business", "Communications"
+  slug          String   @unique // "real_estate", "business", "communications"
+  type          String // "base" or "addon"
+  description   String?
+  features      String[] // List of feature IDs/names
+  price         Decimal? // Monthly price (null for addons, priced separately)
+  stripePriceId String?  @unique // Stripe Price ID
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  subscriptions Subscription[]
+  userPackages  UserPackage[]
+
+  @@index([slug, isActive])
+}
+
+model UserPackage {
+  id                   String    @id @default(cuid())
+  userId               String
+  packageId            String
+  package              Package   @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  user                 Realtor   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status               String    @default("active") // "active", "cancelled", "expired"
+  startsAt             DateTime  @default(now())
+  expiresAt            DateTime?
+  stripeSubscriptionId String? // Link to Stripe subscription
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@unique([userId, packageId])
+  @@index([userId])
+  @@index([status])
+}
+
+model Subscription {
+  id                   String    @id @default(cuid())
+  userId               String
+  packageId            String
+  package              Package   @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  user                 Realtor   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stripeSubscriptionId String    @unique // Stripe subscription ID
+  stripeCustomerId     String // Stripe customer ID
+  status               String // "active", "cancelled", "past_due", "unpaid", "trialing"
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+  cancelAtPeriodEnd    Boolean   @default(false)
+  cancelledAt          DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([stripeSubscriptionId])
+  @@index([status])
+}

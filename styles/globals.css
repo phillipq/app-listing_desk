@@ -1,0 +1,106 @@
+/* Global SoftUI Styles */
+@import 'tailwind.css';
+
+/* Apply SoftUI styling to common elements */
+body {
+  @apply bg-slate-50 text-gray-700;
+}
+
+/* Global button styles */
+.btn-soft {
+  @apply px-4 py-2 rounded-xl shadow-soft-sm transition-all duration-200;
+}
+
+.btn-soft-primary {
+  @apply bg-keppel-500 text-seasalt-500 hover:shadow-soft-md focus:ring-2 focus:ring-keppel-500;
+}
+
+.btn-soft-secondary {
+  @apply bg-white text-gray-700 border border-gray-200 hover:bg-slate-50 hover:shadow-soft-md;
+}
+
+/* Global card styles */
+.card-soft {
+  @apply bg-white rounded-xl shadow-soft-lg border border-gray-100;
+}
+
+/* Global input styles */
+.input-soft {
+  @apply px-3 py-2 border border-gray-200 rounded-xl shadow-soft-sm focus:ring-2 focus:ring-keppel-500 focus:border-keppel-500 transition-all duration-200;
+}
+
+/* Global text styles */
+.text-soft-primary {
+  @apply text-gray-700;
+}
+
+.text-soft-secondary {
+  @apply text-gray-500;
+}
+
+/* Authentic SoftUI Shadow utilities */
+.shadow-soft-xs {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.shadow-soft-sm {
+  box-shadow: 0 3px 5px rgba(0, 0, 0, 0.08);
+}
+
+.shadow-soft-md {
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+}
+
+.shadow-soft-lg {
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.shadow-soft-xl {
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+}
+
+.shadow-soft-2xl {
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+/* Simple 4-Color Palette - Solid Colors Only */
+.bg-buff { background: #E7A573; }
+.bg-keppel { background: #5AA197; }
+.bg-seasalt { background: #FAFAFA; }
+.bg-gray { background: #7B7B7B; }
+
+/* Smooth transitions for all interactive elements */
+* {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+
+/* Custom slider styles for location insights */
+.slider {
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #16a085;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #16a085;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
