@@ -4,8 +4,7 @@ import _bcrypt from "bcryptjs"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { signIn } from "next-auth/react"
-import { Suspense } from "react"
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 
 function SignUpContent() {
   const searchParams = useSearchParams()

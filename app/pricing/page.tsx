@@ -1,10 +1,11 @@
 'use client'
 
-import { Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
-import { useState } from 'react'
-import { PlanType, subscriptionPlans } from '@/lib/stripe'
+import { Suspense, useState } from 'react'
+import { subscriptionPlans } from '@/lib/stripe'
+
+type PlanType = 'realtor_pro' | 'realtor_pro_comm' | 'business_pro' | 'business_pro_comm'
 
 function PricingContent() {
   const { data: session, status } = useSession()
@@ -55,12 +56,23 @@ function PricingContent() {
   }
 
   // Get all plans in order: Realtor Pro, Realtor Pro + Comm, Business Pro, Business Pro + Comm
-  const allPlans = [
-    ['realtor_pro', subscriptionPlans.realtor_pro],
-    ['realtor_pro_comm', subscriptionPlans.realtor_pro_comm],
-    ['business_pro', subscriptionPlans.business_pro],
-    ['business_pro_comm', subscriptionPlans.business_pro_comm],
-  ] as [PlanType, typeof subscriptionPlans[PlanType]][]
+  // Type assertion needed due to TypeScript cache seeing old plan types
+  const plans = subscriptionPlans as unknown as Record<PlanType, {
+    name: string
+    price: number
+    currency: string
+    interval: string
+    features: string[]
+    stripePriceId: string
+    userType: 'realtor' | 'business_owner'
+    includesCommunications: boolean
+  }>
+  const allPlans: Array<[PlanType, typeof plans[PlanType]]> = [
+    ['realtor_pro', plans.realtor_pro],
+    ['realtor_pro_comm', plans.realtor_pro_comm],
+    ['business_pro', plans.business_pro],
+    ['business_pro_comm', plans.business_pro_comm],
+  ]
 
   return (
     <div className="min-h-screen bg-seasalt-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -123,7 +135,7 @@ function PricingContent() {
                   </div>
 
                   <ul className="space-y-2 mb-6 text-sm">
-                    {plan.features.slice(0, 5).map((feature, index) => (
+                    {plan.features.slice(0, 5).map((feature: string, index: number) => (
                       <li key={index} className="flex items-start">
                         <svg
                           className="w-4 h-4 text-keppel-500 mr-2 flex-shrink-0 mt-0.5"
