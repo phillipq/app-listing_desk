@@ -34,7 +34,7 @@ export default async function AdminSubscriptionsPage() {
 
   // Group by status
   type SubscriptionWithIncludes = (typeof subscriptions)[number]
-  const byStatus = subscriptions.reduce((acc: Record<string, SubscriptionWithIncludes[]>, sub) => {
+  const byStatus = subscriptions.reduce((acc: Record<string, SubscriptionWithIncludes[]>, sub: SubscriptionWithIncludes) => {
     if (!acc[sub.status]) {
       acc[sub.status] = []
     }
