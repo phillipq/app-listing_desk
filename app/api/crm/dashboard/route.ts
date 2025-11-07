@@ -120,7 +120,7 @@ export async function GET(_request: NextRequest) {
       }
     })
 
-    const monthlyRevenue = appointmentsWithRevenue.reduce((total, appointment) => {
+    const monthlyRevenue = appointmentsWithRevenue.reduce((total: number, appointment) => {
       return total + (appointment.service?.price || 0)
     }, 0)
 

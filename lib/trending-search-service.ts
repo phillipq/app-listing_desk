@@ -182,10 +182,10 @@ export class TrendingSearchService {
           const previousValues = trendData.slice(-14, -7).map(d => d.value)
           
           const recentAvg = recentValues.length > 0
-            ? recentValues.reduce((a, b) => a + b, 0) / recentValues.length
+            ? recentValues.reduce((a: number, b: number) => a + b, 0) / recentValues.length
             : 0
           const previousAvg = previousValues.length > 0
-            ? previousValues.reduce((a, b) => a + b, 0) / previousValues.length
+            ? previousValues.reduce((a: number, b: number) => a + b, 0) / previousValues.length
             : 0
 
           let trendDirection: 'up' | 'down' | 'stable' = 'stable'

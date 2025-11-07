@@ -71,11 +71,11 @@ export async function getRevenueStats(): Promise<RevenueStats> {
   })
 
   // Calculate totals
-  const totalRevenue = allSubscriptions.reduce((sum, sub) => {
+  const totalRevenue = allSubscriptions.reduce((sum: number, sub) => {
     return sum + (sub.package.price ? Number(sub.package.price) : 0)
   }, 0)
 
-  const monthlyRevenue = monthlySubscriptions.reduce((sum, sub) => {
+  const monthlyRevenue = monthlySubscriptions.reduce((sum: number, sub) => {
     return sum + (sub.package.price ? Number(sub.package.price) : 0)
   }, 0)
 

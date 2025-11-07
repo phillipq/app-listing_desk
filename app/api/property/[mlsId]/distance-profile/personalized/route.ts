@@ -46,7 +46,7 @@ export async function POST(
     ]
     
     // Convert array to Record<string, boolean> format
-    const amenityCategories = categoryArray.reduce((acc, category) => {
+    const amenityCategories = categoryArray.reduce((acc: Record<string, boolean>, category: string) => {
       acc[category] = true
       return acc
     }, {} as Record<string, boolean>)

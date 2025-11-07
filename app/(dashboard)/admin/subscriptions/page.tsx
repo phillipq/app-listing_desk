@@ -33,13 +33,14 @@ export default async function AdminSubscriptionsPage() {
   })
 
   // Group by status
-  const byStatus = subscriptions.reduce((acc, sub) => {
+  type SubscriptionWithIncludes = (typeof subscriptions)[number]
+  const byStatus = subscriptions.reduce((acc: Record<string, SubscriptionWithIncludes[]>, sub) => {
     if (!acc[sub.status]) {
       acc[sub.status] = []
     }
     acc[sub.status]!.push(sub)
     return acc
-  }, {} as Record<string, typeof subscriptions>)
+  }, {} as Record<string, SubscriptionWithIncludes[]>)
 
   return (
     <div className="p-6">

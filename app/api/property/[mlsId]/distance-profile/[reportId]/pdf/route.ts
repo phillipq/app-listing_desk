@@ -532,8 +532,8 @@ function generateStaticMapUrl(
   
   // Calculate center point for better map view
   const allPoints = [propertyLocation, ...limitedAmenities.map(a => ({ lat: a.latitude, lng: a.longitude }))]
-  const centerLat = allPoints.reduce((sum, p) => sum + p.lat, 0) / allPoints.length
-  const centerLng = allPoints.reduce((sum, p) => sum + p.lng, 0) / allPoints.length
+  const centerLat = allPoints.reduce((sum: number, p) => sum + p.lat, 0) / allPoints.length
+  const centerLng = allPoints.reduce((sum: number, p) => sum + p.lng, 0) / allPoints.length
   
   // Calculate zoom level based on spread of points
   const maxDist = Math.max(...allPoints.map(p => {

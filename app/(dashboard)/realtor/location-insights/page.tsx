@@ -749,9 +749,9 @@ function CategoryCard({ category, amenities, propertyLocation }: { category: str
     })
 
     return {
-      driving: times.driving.length > 0 ? Math.round(times.driving.reduce((a, b) => a + b, 0) / times.driving.length) : null,
-      transit: times.transit.length > 0 ? Math.round(times.transit.reduce((a, b) => a + b, 0) / times.transit.length) : null,
-      walking: times.walking.length > 0 ? Math.round(times.walking.reduce((a, b) => a + b, 0) / times.walking.length) : null
+      driving: times.driving.length > 0 ? Math.round(times.driving.reduce((a: number, b: number) => a + b, 0) / times.driving.length) : null,
+      transit: times.transit.length > 0 ? Math.round(times.transit.reduce((a: number, b: number) => a + b, 0) / times.transit.length) : null,
+      walking: times.walking.length > 0 ? Math.round(times.walking.reduce((a: number, b: number) => a + b, 0) / times.walking.length) : null
     }
   }, [amenities, selectedAmenities])
 

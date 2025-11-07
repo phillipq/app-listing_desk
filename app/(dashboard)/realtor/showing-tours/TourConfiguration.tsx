@@ -39,7 +39,7 @@ interface TourConfigurationProps {
 export default function TourConfiguration({ config, properties, onSubmit, onCalculate, onBack, loading }: TourConfigurationProps) {
   const [formData, setFormData] = useState<TourConfig>(config)
   const [propertyDurations, setPropertyDurations] = useState<Record<string, number>>(
-    properties.reduce((acc, property) => {
+    properties.reduce((acc: Record<string, number>, property: TourProperty) => {
       acc[property.id] = property.customDuration || config.showingDuration
       return acc
     }, {} as Record<string, number>)
