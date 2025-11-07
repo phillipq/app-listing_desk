@@ -53,7 +53,7 @@ export default async function AdminSubscriptionsPage() {
 
       {/* Status Summary */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-4 mb-8">
-        {Object.entries(byStatus).map(([status, subs]) => (
+        {Object.entries(byStatus).map(([status, subs]: [string, SubscriptionWithIncludes[]]) => (
           <div key={status} className="bg-white overflow-hidden shadow rounded-lg">
             <div className="p-5">
               <div className="flex items-center">
