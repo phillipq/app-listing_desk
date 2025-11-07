@@ -47,7 +47,7 @@ export default function SignIn() {
         }
         await checkAdmin()
       }
-    } catch (_error) {
+    } catch {
       setError("An error occurred. Please try again.")
     } finally {
       setIsLoading(false)

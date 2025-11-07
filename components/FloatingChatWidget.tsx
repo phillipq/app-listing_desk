@@ -32,13 +32,17 @@ interface FloatingChatWidgetProps {
   realtorName?: string
   primaryColor?: string
   position?: 'bottom-right' | 'bottom-left'
+  apiKey?: string // Optional API key for external websites
+  isInternal?: boolean // If true, uses internal API routes (for logged-in users)
 }
 
 export default function FloatingChatWidget({ 
   realtorId, 
   realtorName = "Realtor",
   primaryColor = "#3B82F6",
-  position = "bottom-right"
+  position = "bottom-right",
+  apiKey,
+  isInternal = false
 }: FloatingChatWidgetProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
@@ -69,14 +73,22 @@ export default function FloatingChatWidget({
         // Check for existing session in localStorage
         const existingSessionId = localStorage.getItem(`leadgen_session_id_${realtorId}`)
         
-        const response = await fetch('/api/session', {
+        // Use internal API for logged-in users, external API for embedded widgets
+        const endpoint = isInternal ? '/api/chatbot/session/internal' : '/api/chatbot/session'
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        }
+        
+        // Add API key for external websites
+        if (!isInternal && apiKey) {
+          headers['Authorization'] = `Bearer ${apiKey}`
+        }
+        
+        const response = await fetch(endpoint, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers,
           body: JSON.stringify({ 
-            sessionId: existingSessionId,
-            realtorId: realtorId 
+            sessionId: existingSessionId
           }),
         })
 
@@ -121,11 +133,20 @@ export default function FloatingChatWidget({
     setIsLoading(true)
 
     try {
-      const response = await fetch('/api/chat', {
+      // Use internal API for logged-in users, external API for embedded widgets
+      const endpoint = isInternal ? '/api/chatbot/chat/internal' : '/api/chatbot/chat'
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      }
+      
+      // Add API key for external websites
+      if (!isInternal && apiKey) {
+        headers['Authorization'] = `Bearer ${apiKey}`
+      }
+      
+      const response = await fetch(endpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({ message: input, sessionId }),
       })
 
@@ -172,15 +193,22 @@ export default function FloatingChatWidget({
       setProfile(null)
       setInput("")
       
-      // Create new session
-      const response = await fetch('/api/session', {
+      // Use internal API for logged-in users, external API for embedded widgets
+      const endpoint = isInternal ? '/api/chatbot/session/internal' : '/api/chatbot/session'
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      }
+      
+      // Add API key for external websites
+      if (!isInternal && apiKey) {
+        headers['Authorization'] = `Bearer ${apiKey}`
+      }
+      
+      const response = await fetch(endpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({ 
-          sessionId: null, // Force new session
-          realtorId: realtorId
+          sessionId: null // Force new session
         }),
       })
 
@@ -193,7 +221,7 @@ export default function FloatingChatWidget({
         // Add welcome message
         setMessages([{
           role: 'assistant',
-          content: `Hi! I'm here to help you find your perfect property with ${realtorName}. What are you looking for?`
+          content: `Hi! I'm here to help you. How can I assist you today?`
         }])
       }
     } catch (error) {
@@ -211,15 +239,14 @@ export default function FloatingChatWidget({
     <div className={`fixed ${positionClasses} z-50`}>
       {/* Chat Widget */}
       {isOpen && (
-        <div className="mb-4 w-80 h-96 bg-white rounded-lg shadow-2xl border border-gray-200 flex flex-col">
+        <div className="mb-4 w-96 h-[500px] bg-white rounded-lg shadow-2xl border border-gray-200 flex flex-col">
           {/* Header */}
           <div 
             className="p-4 border-b flex justify-between items-center rounded-t-lg"
             style={{ backgroundColor: primaryColor }}
           >
             <div>
-              <h3 className="text-gray-700 font-semibold">Chat with {realtorName}</h3>
-              <p className="text-gray-700 text-sm opacity-90">AI Property Assistant</p>
+              <h3 className="text-gray-700 font-semibold text-lg">AI Assistant</h3>
             </div>
             <div className="flex space-x-2">
               {messages.length > 0 && (
@@ -245,13 +272,8 @@ export default function FloatingChatWidget({
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {messages.length === 0 ? (
               <div className="text-center text-gray-500 text-sm">
-                <p className="mb-2">👋 Hi! I'm here to help you find your perfect property.</p>
-                <p>Ask me about:</p>
-                <ul className="text-xs mt-2 space-y-1">
-                  <li>• Property search criteria</li>
-                  <li>• Neighborhood information</li>
-                  <li>• Market trends</li>
-                </ul>
+                <p className="mb-2">👋 Hi! I'm here to help you.</p>
+                <p>How can I assist you today?</p>
               </div>
             ) : (
               messages.map((message, index) => (
@@ -295,7 +317,7 @@ export default function FloatingChatWidget({
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask about properties..."
+                placeholder="Type your message..."
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-keppel-500 text-sm"
                 disabled={isLoading}
               />

@@ -1,65 +1,60 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth/next'
 import { v4 as uuidv4 } from 'uuid'
-import { prisma } from '../../../../lib/prisma'
+import { authOptions } from '../../../../../lib/auth'
+import { prisma } from '../../../../../lib/prisma'
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
     const body = await request.json() as { sessionId?: string }
     const { sessionId } = body
-    
-    // Get API key from Authorization header
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Missing or invalid API key' },
-        { status: 401 }
-      )
-    }
-    
-    const apiKey = authHeader.replace('Bearer ', '')
-    
-    // Find realtor by API key
+
+    // Find realtor by user ID
     const realtor = await prisma.realtor.findUnique({
-      where: { apiKey },
-      select: { id: true, name: true, domain: true }
+      where: { id: session.user.id },
+      select: { id: true, name: true, email: true }
     })
-    
+
     if (!realtor) {
       return NextResponse.json(
-        { error: 'Invalid API key' },
-        { status: 401 }
+        { error: 'Realtor not found' },
+        { status: 404 }
       )
     }
-    
-    console.log('Chatbot session for realtor:', realtor.name, 'Domain:', realtor.domain)
-    
-    let session
+
+    let dbSession
     
     if (sessionId) {
       // Try to resume existing session
-      session = await prisma.session.findUnique({
+      dbSession = await prisma.session.findUnique({
         where: { sessionToken: sessionId }
       })
       
-      if (session) {
+      if (dbSession) {
         // Verify session belongs to this realtor
-        if (session.realtorId !== realtor.id) {
+        if (dbSession.realtorId !== realtor.id) {
           return NextResponse.json(
             { error: 'Session does not belong to this realtor' },
             { status: 403 }
           )
         }
-        
-        // Note: lastActivity field not available in current schema
-        // Session is found and verified
       }
     }
     
-    if (!session) {
+    if (!dbSession) {
       // Create new session for this realtor
       const newSessionToken = uuidv4()
       
-      session = await prisma.session.create({
+      dbSession = await prisma.session.create({
         data: {
           sessionToken: newSessionToken,
           realtorId: realtor.id,
@@ -88,21 +83,20 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({
-      sessionId: session.sessionToken,
-      // Note: Messages and profile not available via Session relation
-      // These would need to be fetched separately if needed
+      sessionId: dbSession.sessionToken,
       messages: [],
       profile: null,
       realtor: {
         name: realtor.name,
-        domain: realtor.domain
+        email: realtor.email
       }
     })
   } catch (error) {
-    console.error('Chatbot session error:', error)
+    console.error('Chatbot internal session error:', error)
     return NextResponse.json(
       { error: 'Failed to create session' },
       { status: 500 }
     )
   }
 }
+

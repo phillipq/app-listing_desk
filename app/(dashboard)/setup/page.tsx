@@ -10,6 +10,7 @@ const Channels = dynamic(() => import('../../../components/setup/ChannelsWrapper
 const InstagramGuide = dynamic(() => import('../../../components/setup/InstagramGuideWrapper'), { ssr: false })
 const WhatsAppGuide = dynamic(() => import('../../../components/setup/WhatsAppGuideWrapper'), { ssr: false })
 const ExistingNumberGuide = dynamic(() => import('../../../components/setup/ExistingNumberGuideWrapper'), { ssr: false })
+const ChatbotDeployment = dynamic(() => import('../../../components/setup/ChatbotDeploymentWrapper'), { ssr: false })
 const Settings = dynamic(() => import('../../dashboard/settings/page'), { ssr: false })
 
 const tabs = [
@@ -18,6 +19,7 @@ const tabs = [
   { id: 'instagram-guide', label: 'Instagram Guide' },
   { id: 'whatsapp-guide', label: 'WhatsApp Guide' },
   { id: 'existing-number-guide', label: 'Existing Number Guide' },
+  { id: 'chatbot-deployment', label: 'Chatbot Deployment' },
   { id: 'settings', label: 'Settings' }
 ]
 
@@ -49,6 +51,8 @@ export default function SetupPage() {
         return <WhatsAppGuide />
       case 'existing-number-guide':
         return <ExistingNumberGuide />
+      case 'chatbot-deployment':
+        return <ChatbotDeployment />
       case 'settings':
         return <Settings />
       default:

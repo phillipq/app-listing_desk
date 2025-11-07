@@ -181,7 +181,7 @@ export class FacebookAPIService {
         `${this.baseUrl}/me?access_token=${this.accessToken}`
       )
       return response.ok
-    } catch (_error) {
+    } catch {
       return false
     }
   }

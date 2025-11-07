@@ -154,7 +154,7 @@ export class AIMessageProcessor {
     }
   }
 
-  private async generateAIResponse(messageContent: string, conversationContext: string): Promise<string> {
+  private async generateAIResponse(messageContent: string, _conversationContext: string): Promise<string> {
     const content = messageContent.toLowerCase()
 
     // Simple response templates - in production, use OpenAI API

@@ -23,6 +23,7 @@ export default function DashboardWithChatbot({ children }: DashboardWithChatbotP
         realtorName={session.user.name || "Assistant"}
         primaryColor="#5AA197" // keppel-500
         position="bottom-right"
+        isInternal={true}
       />
     </>
   )

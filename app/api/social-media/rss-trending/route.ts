@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { TrendingSearchService } from '@/lib/trending-search-service'
 import { SerpAPITrendsService } from '@/lib/serpapi-trends-service'
+import { TrendingSearchService } from '@/lib/trending-search-service'
 
 // GET - Fetch trending topics from Google Trends RSS feed
 export async function GET(_request: NextRequest) {
