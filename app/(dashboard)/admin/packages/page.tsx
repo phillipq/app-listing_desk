@@ -1,4 +1,5 @@
 
+import { Decimal } from '@prisma/client/runtime/library'
 import { redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
 import DeactivateOldPackagesButton from '@/components/admin/DeactivateOldPackagesButton'
@@ -8,11 +9,19 @@ import { authOptions } from '@/lib/auth'
 import { getAllPackages } from '@/lib/packages/service'
 import { prisma } from '@/lib/prisma'
 
-type Package = Awaited<ReturnType<typeof getAllPackages>>[0] & {
-  slug: string
-  name: string
-  type: string
+// Define Package type explicitly to ensure all fields are available
+interface Package {
   id: string
+  name: string
+  slug: string
+  type: string
+  description: string | null
+  features: string[]
+  price: Decimal | null
+  stripePriceId: string | null
+  isActive: boolean
+  createdAt: Date
+  updatedAt: Date
 }
 
 interface PackageWithStats extends Package {
