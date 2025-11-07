@@ -3,7 +3,6 @@
 import { useState } from 'react'
 
 export default function WhatsAppGuidePage() {
-  const [currentStep, setCurrentStep] = useState(0)
   const [integrationType, setIntegrationType] = useState<'new' | 'existing'>('new')
 
   const newNumberSteps = [
@@ -173,9 +172,7 @@ export default function WhatsAppGuidePage() {
           {currentSteps.map((step, index) => (
             <div key={index} className="flex items-start space-x-4">
               <div className="flex-shrink-0">
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl ${
-                  index <= currentStep ? 'bg-keppel-500 text-white' : 'bg-gray-200 text-gray-500'
-                }`}>
+                <div className="w-12 h-12 rounded-full flex items-center justify-center text-xl bg-keppel-500 text-white">
                   {index + 1}
                 </div>
               </div>

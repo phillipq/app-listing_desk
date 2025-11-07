@@ -4,8 +4,6 @@ import { redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
 import { isAdmin } from '@/lib/admin-auth'
 import { authOptions } from '@/lib/auth'
-
-import { getUserPackages } from '@/lib/packages/access'
 import { prisma } from '@/lib/prisma'
 
 export default async function AdminUsersPage() {

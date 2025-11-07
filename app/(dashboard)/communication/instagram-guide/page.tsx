@@ -1,10 +1,6 @@
 'use client'
 
-import { useState } from 'react'
-
 export default function InstagramGuidePage() {
-  const [currentStep, setCurrentStep] = useState(0)
-
   const steps = [
     {
       title: "One-Click Instagram Connect",

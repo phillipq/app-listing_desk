@@ -1,9 +1,9 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import { isAdmin } from '@/lib/admin-auth'
 import DashboardWithChatbot from '@/components/DashboardWithChatbot'
+import { isAdmin } from '@/lib/admin-auth'
+import { authOptions } from '@/lib/auth'
  
 
 export default async function CommunicationHub() {

@@ -1,10 +1,6 @@
 'use client'
 
-import { useState } from 'react'
-
 export default function ExistingNumberGuidePage() {
-  const [currentStep, setCurrentStep] = useState(0)
-
   const steps = [
     {
       title: "Connect Your Existing Number",
