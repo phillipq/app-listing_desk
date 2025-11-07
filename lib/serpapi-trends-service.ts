@@ -115,7 +115,7 @@ export class SerpAPITrendsService {
   async fetchInterestOverTime(
     keyword: string,
     geoCode: string = 'US',
-    timeframe: string = 'today 1-m' // Last month (optional - Google Trends default is usually fine)
+    _timeframe: string = 'today 1-m' // Last month (optional - Google Trends default is usually fine)
   ): Promise<SerpAPITrendData | null> {
     if (!this.apiKey) {
       throw new Error('SerpAPI API key not configured')

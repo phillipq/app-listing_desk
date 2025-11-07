@@ -31,7 +31,7 @@ export default async function AdminPackagesPage() {
 
   // Get user counts for each package
   const packageStats = await Promise.all(
-    packages.map(async (pkg) => {
+    packages.map(async (pkg: Package) => {
       const userCount = await prisma.userPackage.count({
         where: {
           packageId: pkg.id,

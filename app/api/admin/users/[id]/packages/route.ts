@@ -78,17 +78,8 @@ export async function POST(
     const activePackagesCount = packageIds.length
     const newStatus = activePackagesCount > 0 ? 'active' : 'inactive'
 
-    // Determine user type from base package slug
+    // Get base package for subscription creation
     const basePackage = basePackages[0]
-    let userType: 'realtor' | 'business_owner' | null = null
-    if (basePackage) {
-      const slug = basePackage.slug
-      if (slug === 'realtor_pro' || slug === 'realtor_pro_comm') {
-        userType = 'realtor'
-      } else if (slug === 'business_pro' || slug === 'business_pro_comm') {
-        userType = 'business_owner'
-      }
-    }
 
     await prisma.realtor.update({
       where: { id: userId },

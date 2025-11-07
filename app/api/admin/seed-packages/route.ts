@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { isAdmin } from '@/lib/admin-auth'
+import { authOptions } from '@/lib/auth'
 import { seedDefaultPackages } from '@/lib/packages/service'
 
 /**

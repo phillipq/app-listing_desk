@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import OpenAI from 'openai'
+import { authOptions } from '@/lib/auth'
 import { getTemplateById } from '@/lib/instagram-templates'
 
 const openai = new OpenAI({
