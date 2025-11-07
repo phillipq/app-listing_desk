@@ -1,5 +1,4 @@
 
-import { Prisma } from '@prisma/client'
 import { redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
 import DeactivateOldPackagesButton from '@/components/admin/DeactivateOldPackagesButton'
@@ -9,7 +8,12 @@ import { authOptions } from '@/lib/auth'
 import { getAllPackages } from '@/lib/packages/service'
 import { prisma } from '@/lib/prisma'
 
-type Package = Prisma.PackageGetPayload<Record<string, never>>
+type Package = Awaited<ReturnType<typeof getAllPackages>>[0] & {
+  slug: string
+  name: string
+  type: string
+  id: string
+}
 
 interface PackageWithStats extends Package {
   userCount: number
