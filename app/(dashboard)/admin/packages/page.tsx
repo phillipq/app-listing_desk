@@ -1,5 +1,4 @@
 
-import { Package } from '@prisma/client'
 import { redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
 import DeactivateOldPackagesButton from '@/components/admin/DeactivateOldPackagesButton'
@@ -8,6 +7,8 @@ import { isAdmin } from '@/lib/admin-auth'
 import { authOptions } from '@/lib/auth'
 import { getAllPackages } from '@/lib/packages/service'
 import { prisma } from '@/lib/prisma'
+
+type Package = Awaited<ReturnType<typeof getAllPackages>>[0]
 
 interface PackageWithStats extends Package {
   userCount: number
